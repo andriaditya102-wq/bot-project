@@ -1,47 +1,51 @@
-from fastapi import FastAPI, WebSocket
-import threading
-import time
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 import asyncio
+import os
 
 app = FastAPI()
 
+# Variabel Global
 bot_running = False
-clients = []
+profit = 0
+clients = set()
 
-def bot_loop():
-    global bot_running
-    profit = 0
+# Fungsi untuk mengirim data ke semua koneksi WebSocket
+async def broadcast_data():
+    global profit, bot_running
+    while True:
+        if bot_running:
+            profit += 1
+            data = {
+                "log": "Bot sedang jalan...",
+                "profit": profit
+            }
+            # Kirim ke semua client yang terhubung
+            if clients:
+                await asyncio.gather(
+                    *[client.send_json(data) for client in clients],
+                    return_exceptions=True
+                )
+        await asyncio.sleep(2)
 
-    while bot_running:
-        profit += 1
-
-        data = {
-            "log": "Bot sedang jalan...",
-            "profit": profit
-        }
-
-        print(data)
-
-        for client in clients:
-            try:
-                asyncio.run(client.send_json(data))
-            except:
-                pass
-
-        time.sleep(2)
+# Jalankan background task saat aplikasi mulai
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(broadcast_data())
 
 @app.get("/")
-def home():
-    return {"message": "Bot API jalan 🔥"}
+async def get_dashboard():
+    # Menampilkan file index.html sebagai tampilan utama
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
+    return {"message": "Bot API jalan 🔥, tapi index.html tidak ditemukan"}
 
 @app.get("/start")
 def start():
     global bot_running
-    if not bot_running:
-        bot_running = True
-        threading.Thread(target=bot_loop).start()
-        return {"message": "Bot started"}
-    return {"message": "Bot already running"}
+    bot_running = True
+    return {"message": "Bot started"}
 
 @app.get("/stop")
 def stop():
@@ -52,9 +56,9 @@ def stop():
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    clients.append(websocket)
+    clients.add(websocket)
     try:
         while True:
-            await websocket.receive_text()
-    except:
+            await websocket.receive_text() # Tetap jaga koneksi
+    except WebSocketDisconnect:
         clients.remove(websocket)
