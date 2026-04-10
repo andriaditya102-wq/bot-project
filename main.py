@@ -1,36 +1,51 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI
 from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 import asyncio
 import os
 
 app = FastAPI()
 
-# Variabel Global
+# ===== STATE =====
 bot_running = False
 profit = 0
 
+# ===== BOT LOOP =====
+async def bot_loop():
+    global profit, bot_running
+    while True:
+        if bot_running:
+            profit += 1
+            print(f"Profit: {profit}")
+        await asyncio.sleep(2)
 
-# Jalankan background task saat aplikasi mulai
+# ===== STARTUP =====
 @app.on_event("startup")
 async def startup_event():
-    asyncio.create_task(broadcast_data())
+    asyncio.create_task(bot_loop())
 
+# ===== PATH =====
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# ===== ROUTES =====
 @app.get("/")
-async def get_dashboard():
-    # Menunjuk langsung ke alamat folder di PythonAnywhere
-    index_path = "/home/MuhammadAndriAditya/bot-project/index.html"
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return {"message": "Bot API jalan 🔥, tapi index.html tidak ditemukan di path server"}
-@app.get("/start")
+def dashboard():
+    return FileResponse(os.path.join(BASE_DIR, "index.html"))
+
+@app.post("/start")
 def start():
     global bot_running
     bot_running = True
-    return {"message": "Bot started"}
+    return {"status": "running"}
 
-@app.get("/stop")
+@app.post("/stop")
 def stop():
     global bot_running
     bot_running = False
-    return {"message": "Bot stopped"}
+    return {"status": "stopped"}
+
+@app.get("/data")
+def get_data():
+    return {
+        "running": bot_running,
+        "profit": profit
+    }
