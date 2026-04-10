@@ -1,4 +1,6 @@
 <script>
+document.addEventListener("DOMContentLoaded", function () {
+
   const profitText = document.getElementById("profit");
   const statusText = document.getElementById("status");
 
@@ -34,23 +36,28 @@
     statusText.textContent = "STOPPED";
   }
 
-  // 🔥 GANTI WEBSOCKET → POLLING
   async function loadData() {
-    const res = await fetch(`${baseUrl}/data`);
-    const data = await res.json();
+    try {
+      const res = await fetch(`${baseUrl}/data`);
+      const data = await res.json();
 
-    profitText.textContent = data.profit;
+      profitText.textContent = data.profit;
 
-    profitData.push(data.profit);
-    labels.push("");
+      profitData.push(data.profit);
+      labels.push("");
 
-    if (profitData.length > 20) {
-      profitData.shift();
-      labels.shift();
+      if (profitData.length > 20) {
+        profitData.shift();
+        labels.shift();
+      }
+
+      chart.update();
+    } catch (err) {
+      console.log("Error:", err);
     }
-
-    chart.update();
   }
 
   setInterval(loadData, 2000);
+
+});
 </script>
