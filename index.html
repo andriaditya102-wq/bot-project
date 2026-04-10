@@ -1,13 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bot Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<h1>Bot Dashboard</h1>
+
+<p>Status: <span id="status">STOPPED</span></p>
+<p>Profit: <span id="profit">0</span></p>
+
+<button onclick="startBot()">Start</button>
+<button onclick="stopBot()">Stop</button>
+
+<canvas id="chart" width="300" height="150"></canvas>
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
   const profitText = document.getElementById("profit");
   const statusText = document.getElementById("status");
-
-  const host = window.location.host;
-  const protocol = window.location.protocol;
-
-  const baseUrl = `${protocol}//${host}`;
 
   let profitData = [];
   let labels = [];
@@ -19,45 +32,45 @@ document.addEventListener("DOMContentLoaded", function () {
       labels: labels,
       datasets: [{
         label: 'Profit',
-        data: profitData,
-        borderColor: '#38bdf8',
-        tension: 0.1
+        data: profitData
       }]
     }
   });
 
   function startBot() {
-    fetch(`${baseUrl}/start`, { method: "POST" });
+    fetch('/start', { method: "POST" });
     statusText.textContent = "RUNNING";
   }
 
   function stopBot() {
-    fetch(`${baseUrl}/stop`, { method: "POST" });
+    fetch('/stop', { method: "POST" });
     statusText.textContent = "STOPPED";
   }
 
+  window.startBot = startBot;
+  window.stopBot = stopBot;
+
   async function loadData() {
-    try {
-      const res = await fetch(`${baseUrl}/data`);
-      const data = await res.json();
+    const res = await fetch('/data');
+    const data = await res.json();
 
-      profitText.textContent = data.profit;
+    profitText.textContent = data.profit;
 
-      profitData.push(data.profit);
-      labels.push("");
+    profitData.push(data.profit);
+    labels.push("");
 
-      if (profitData.length > 20) {
-        profitData.shift();
-        labels.shift();
-      }
-
-      chart.update();
-    } catch (err) {
-      console.log("Error:", err);
+    if (profitData.length > 20) {
+      profitData.shift();
+      labels.shift();
     }
+
+    chart.update();
   }
 
   setInterval(loadData, 2000);
 
 });
 </script>
+
+</body>
+</html>
