@@ -1,21 +1,11 @@
 <script>
-  const logDiv = document.getElementById("log");
   const profitText = document.getElementById("profit");
   const statusText = document.getElementById("status");
-  const connectionText = document.getElementById("connection");
 
-  // Deteksi Otomatis Alamat Server (PENTING!)
   const host = window.location.host;
-  const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  
-  // Jika dijalankan lokal tetap pakai localhost, jika di cloud pakai domain server
-  const baseUrl = host.includes('127.0.0.1') || host.includes('localhost') 
-                  ? `${protocol}//127.0.0.1:8000` 
-                  : `${protocol}//${host}`;
-  const wsUrl = host.includes('127.0.0.1') || host.includes('localhost') 
-                ? `ws://127.0.0.1:8000/ws` 
-                : `${wsProtocol}//${host}/ws`;
+  const protocol = window.location.protocol;
+
+  const baseUrl = `${protocol}//${host}`;
 
   let profitData = [];
   let labels = [];
@@ -35,48 +25,32 @@
   });
 
   function startBot() {
-    fetch(`${baseUrl}/start`);
+    fetch(`${baseUrl}/start`, { method: "POST" });
     statusText.textContent = "RUNNING";
-    statusText.style.color = "#22c55e";
   }
 
   function stopBot() {
-    fetch(`${baseUrl}/stop`);
+    fetch(`${baseUrl}/stop`, { method: "POST" });
     statusText.textContent = "STOPPED";
-    statusText.style.color = "#ef4444";
   }
 
-  // WebSocket Connection
-  function connect() {
-    const ws = new WebSocket(wsUrl);
+  // 🔥 GANTI WEBSOCKET → POLLING
+  async function loadData() {
+    const res = await fetch(`${baseUrl}/data`);
+    const data = await res.json();
 
-    ws.onopen = () => {
-      connectionText.textContent = "Connected";
-      connectionText.style.color = "#22c55e";
-    };
+    profitText.textContent = data.profit;
 
-    ws.onclose = () => {
-      connectionText.textContent = "Disconnected";
-      connectionText.style.color = "#ef4444";
-      setTimeout(connect, 2000); // Reconnect otomatis jika putus
-    };
+    profitData.push(data.profit);
+    labels.push("");
 
-    ws.onmessage = function(event) {
-      const data = JSON.parse(event.data);
-      const p = document.createElement("p");
-      p.textContent = `[${new Date().toLocaleTimeString()}] ${data.log}`;
-      logDiv.appendChild(p);
-      profitText.textContent = data.profit;
-      profitData.push(data.profit);
-      labels.push("");
-      if (profitData.length > 20) { // Batasi data chart agar tidak berat
-        profitData.shift();
-        labels.shift();
-      }
-      chart.update();
-      logDiv.scrollTop = logDiv.scrollHeight;
-    };
+    if (profitData.length > 20) {
+      profitData.shift();
+      labels.shift();
+    }
+
+    chart.update();
   }
 
-  connect();
+  setInterval(loadData, 2000);
 </script>
