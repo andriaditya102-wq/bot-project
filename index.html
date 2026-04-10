@@ -1,5 +1,7 @@
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+window.onerror = function(message, source, lineno, colno, error) {
+  document.body.innerHTML = "<h2>Error terjadi:</h2><p>" + message + "</p>";
+};document.addEventListener("DOMContentLoaded", function () {
 
   const profitText = document.getElementById("profit");
   const statusText = document.getElementById("status");
@@ -7,17 +9,21 @@ document.addEventListener("DOMContentLoaded", function () {
   let profitData = [];
   let labels = [];
 
+  let chart;
+
+if (typeof Chart !== "undefined") {
   const ctx = document.getElementById("chart").getContext("2d");
-  const chart = new Chart(ctx, {
+  chart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: labels,
+      labels: [],
       datasets: [{
         label: 'Profit',
-        data: profitData
+        data: []
       }]
     }
   });
+}
 
   function startBot() {
     fetch('/start', { method: "POST" });
@@ -48,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function () {
         labels.shift();
       }
 
-      chart.update();
+      if (chart) chart.update();
     } catch (err) {
       console.log("Error:", err);
     }
